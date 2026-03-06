@@ -1,0 +1,44 @@
+version: "3.9"
+services:
+  mediaLocale-backend:
+    image: node:18-alpine
+    working_dir: /usr/src/app
+    command: sh -c "npm install --only=production && node server.prod.js"
+    ports:
+      - "127.0.0.1:7006:7006"
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./:/usr/src/app
+      - ./uploads:/usr/src/app/uploads
+    restart: unless-stopped
+    depends_on:
+      - mariadb
+    networks:
+      - db-admin-net
+
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: media_locale_prod_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+      MARIADB_ROOT_PASSWORD: RootPass@2025!
+    volumes:
+      - media-locale-db-data:/var/lib/mysql
+    ports:
+      - "3309:3306"
+    networks:
+      db-admin-net:
+        aliases:
+          - medialocale-db
+
+volumes:
+  media-locale-db-data:
+    name: media-locale-backend_media-db-data
+
+networks:
+  db-admin-net:
+    name: db-admin-net

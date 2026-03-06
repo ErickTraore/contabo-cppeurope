@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  userMediaProfile-backend:
+    image: node:18-alpine
+    working_dir: /usr/src/app
+    command: sh -c "npm install --only=production && node server.prod.js"
+    ports:
+      - "127.0.0.1:7007:7007"
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    volumes:
+      - ./:/usr/src/app
+      - ./uploads:/usr/src/app/uploads
+    restart: unless-stopped
+    networks:
+      - db-admin-net
+
+networks:
+  db-admin-net:
+    external: true
+    name: db-admin-net
