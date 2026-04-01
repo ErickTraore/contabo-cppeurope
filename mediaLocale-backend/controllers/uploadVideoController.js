@@ -1,5 +1,6 @@
 // File : media-backend/controllers/uploadVideoController.js
 
+const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const { Media } = require('../models');
@@ -12,7 +13,13 @@ const MAX_BYTES = process.env.UPLOAD_LIMIT_BYTES
 // 📁 Définir le stockage des fichiers avec chemin ABSOLU
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '..', process.env.UPLOAD_VIDEOS_PATH || 'uploads/videos'));
+    const dest = path.join(__dirname, '..', process.env.UPLOAD_VIDEOS_PATH || 'uploads/videos');
+    try {
+      fs.mkdirSync(dest, { recursive: true });
+    } catch (err) {
+      return cb(err);
+    }
+    cb(null, dest);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));

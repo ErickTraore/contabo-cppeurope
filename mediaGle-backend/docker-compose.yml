@@ -1,12 +1,16 @@
-version: "3.9"
 services:
   mediaGle-backend:
     image: node:18-alpine
     working_dir: /usr/src/app
     command: sh -c "npm install --only=production && node server.prod.js"
     env_file: .env.production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
+      PRESSE_BASE_URL: http://62.171.186.233:7016
+    ports:
+      - "127.0.0.1:7004:7004"
     volumes:
       - ./:/usr/src/app
       - ./uploads:/usr/src/app/uploads
