@@ -29,7 +29,7 @@ const MediaPresseLocale = require('./mediaPresseLocale')(sequelize, DataTypes);
 const Media = MediaPresseLocale;
 
 // Définir les associations
-if (MediaPresseLocale.associate) MediaPresseLocale.associate({ MediaProfile });
+// (Suppression de l'association avec MediaProfile car le modèle n'existe pas)
 
 module.exports = {
   sequelize,

@@ -127,11 +127,19 @@ module.exports = {
                         });
                         clearTimeout(timeoutId);
 
+                        if (!response.ok) {
+                            return {
+                                ...messagePlain,
+                                media: []
+                            };
+                        }
+
                         const mediaData = await response.json();
+                        const media = Array.isArray(mediaData) ? mediaData : [];
 
                         return {
-                            ...messagePlain, // ✅ Convertir Sequelize object en JSON
-                            media: mediaData || [] // ✅ Ajouter les médias au message
+                            ...messagePlain,
+                            media
                         };
                     } catch (error) {
                         console.error(`❌ Erreur lors de la récupération des médias pour le message ${message.id}:`, error.message);

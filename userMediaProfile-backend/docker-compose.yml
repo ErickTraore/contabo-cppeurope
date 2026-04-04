@@ -15,8 +15,30 @@ services:
     restart: unless-stopped
     networks:
       - db-admin-net
+    depends_on:
+      - userprofile-db
+
+  userprofile-db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: user_profile_prod_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+      MARIADB_ROOT_PASSWORD: RootPass@2025!
+    volumes:
+      - userprofile-db-data:/var/lib/mysql
+    ports:
+      - "3312:3306"
+    networks:
+      db-admin-net:
+        aliases:
+          - userprofile-db
 
 networks:
   db-admin-net:
     external: true
     name: db-admin-net
+
+volumes:
+  userprofile-db-data:

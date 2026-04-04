@@ -2,9 +2,10 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-// ON CHARGE SEULEMENT LES VARIABLES SENSIBLES (.env.production),
-// PAS NODE_ENV (déjà fixé par Docker)
-dotenv.config({ path: path.join(__dirname, '..', '.env.production') });
+// Charger le .env aligné sur NODE_ENV : ne pas importer .env.production en dev
+// (sinon DB_NAME_MEDIA_DEV peut viser media_locale_prod_* alors que MariaDB dev n’a que *_dev_*).
+const nodeEnv = process.env.NODE_ENV || 'development';
+dotenv.config({ path: path.join(__dirname, '..', `.env.${nodeEnv}`) });
 
 module.exports = {
   development: {

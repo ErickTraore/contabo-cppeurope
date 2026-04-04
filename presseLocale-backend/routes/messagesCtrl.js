@@ -4,7 +4,9 @@ const fetch = (...args) => import('node-fetch').then(({
     default: fetch
 }) => fetch(...args));
 const MEDIA_BACKEND_URL = process.env.MEDIA_BACKEND_URL || 'http://localhost:7004/api/media/getMedia';
-const MEDIA_LOCALE_BACKEND_URL = process.env.MEDIA_LOCALE_BACKEND_URL || MEDIA_BACKEND_URL;
+/** Ne jamais retomber sur MEDIA_BACKEND_URL : mêmes ids presse locale / générale → médias de la mauvaise base. */
+const MEDIA_LOCALE_BACKEND_URL =
+  process.env.MEDIA_LOCALE_BACKEND_URL || 'http://localhost:7008/api/media-locale/getMedia';
 
 const models = require('../models');
 const jwtUtils = require('../utils/jwt.utils');
@@ -122,10 +124,11 @@ module.exports = {
                         clearTimeout(timeoutId);
 
                         const mediaData = await response.json();
+                        const media = Array.isArray(mediaData) ? mediaData : [];
 
                         return {
-                            ...messagePlain, // ✅ Convertir Sequelize object en JSON
-                            media: mediaData || [] // ✅ Ajouter les médias au message
+                            ...messagePlain,
+                            media
                         };
                     } catch (error) {
                         console.error(`❌ Erreur lors de la récupération des médias pour le message ${message.id}:`, error.message);

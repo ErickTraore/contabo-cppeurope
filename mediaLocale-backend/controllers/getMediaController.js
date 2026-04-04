@@ -51,8 +51,11 @@ const deleteMedia = async (req, res) => {
         const fs = require('fs');
         const path = require('path');
         try {
-            if (fs.existsSync(media.path)) {
-                fs.unlinkSync(media.path);
+            const abs = path.isAbsolute(media.path)
+                ? media.path
+                : path.join(__dirname, '..', media.path);
+            if (fs.existsSync(abs)) {
+                fs.unlinkSync(abs);
             }
         } catch (err) {
             console.error("Erreur suppression fichier:", err);

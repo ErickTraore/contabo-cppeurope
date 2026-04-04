@@ -17,6 +17,8 @@ services:
     restart: unless-stopped
     depends_on:
       - mariadb
+    ports:
+      - "127.0.0.1:7004:7004"
 
   mariadb:
     image: mariadb:11
@@ -28,6 +30,10 @@ services:
       MARIADB_ROOT_PASSWORD: RootPass@2025!
     volumes:
       - media-db-data:/var/lib/mysql
+    networks:
+      default:
+        aliases:
+          - mariadb
 
 volumes:
   media-db-data:

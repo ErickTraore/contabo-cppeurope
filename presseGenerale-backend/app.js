@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const { getSignature } = require('./routes/zoomCtrl');
 const apiRouter = require('./apiRouter').router;
+const { sequelize } = require('./models');
 
 const app = express();
 
@@ -76,5 +77,15 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => res.status(200).send('PRESSE-GENERALE-BACKEND (prod) actif'));
 app.get('/api/zoom/signature', getSignature);
 app.use('/api', apiRouter);
+
+// Route GET /api/ping pour supervision BDD
+app.get('/api/ping', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.status(200).json({ ok: true, db: 'ok' });
+  } catch (e) {
+    res.status(500).json({ ok: false, db: 'error', error: e.message });
+  }
+});
 
 module.exports = app;

@@ -5,7 +5,7 @@ services:
     working_dir: /usr/src/app
     command: sh -c "npm install --only=production && node server.prod.js"
     ports:
-      - "127.0.0.1:7006:7006"
+      - "127.0.0.1:7008:7008"
     env_file: .env.production
     environment:
       NODE_ENV: production
@@ -34,6 +34,7 @@ services:
       db-admin-net:
         aliases:
           - medialocale-db
+          - mariadb
 
 volumes:
   media-locale-db-data:

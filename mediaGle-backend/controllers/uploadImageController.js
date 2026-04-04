@@ -4,6 +4,13 @@ const path = require("path");
 const { Media } = require("../models");
 const { fetchPresseFormat, allowsImageForFormat, isUnknownFormat } = require("../utils/presseFormatGate");
 
+function parseMessageId(body) {
+  const raw = body && body.messageId;
+  if (raw === undefined || raw === null || raw === "") return null;
+  const n = parseInt(String(raw), 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
 const MAX_BYTES = process.env.UPLOAD_LIMIT_BYTES
   ? parseInt(process.env.UPLOAD_LIMIT_BYTES, 10)
   : 600 * 1024 * 1024;
@@ -43,33 +50,38 @@ const uploadImage = async (req, res) => {
   }
 
   try {
-    const messageId = req.body.messageId || null;
-    if (messageId) {
-      const fmt = await fetchPresseFormat(messageId);
-      if (isUnknownFormat(fmt)) {
-        try {
-          const fs = require("fs");
-          if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        } catch (e) {}
-        return res.status(503).json({
-          error:
-            "Impossible de vérifier le format de l'article (presse indisponible ou message introuvable).",
-        });
-      }
-      if (!allowsImageForFormat(fmt)) {
-        try {
-          const fs = require("fs");
-          if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        } catch (e) {}
-        return res.status(403).json({ error: "Ce type d'article n'accepte pas d'image." });
-      }
+    const messageId = parseMessageId(req.body);
+    if (!messageId) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(400).json({
+        error: "messageId invalide ou manquant (requis pour lier l'image au message presse).",
+      });
+    }
+
+    const fmt = await fetchPresseFormat(messageId);
+    if (isUnknownFormat(fmt)) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(503).json({
+        error:
+          "Impossible de vérifier le format de l'article (presse indisponible ou message introuvable).",
+      });
+    }
+    if (!allowsImageForFormat(fmt)) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(403).json({ error: "Ce type d'article n'accepte pas d'image." });
     }
 
     const mediaFile = await Media.create({
       filename: req.file.filename,
       path: req.file.path,
       type: "image",
-      messageId: messageId || null,
+      messageId,
     });
 
     res.status(201).json({ message: "Image uploadée avec succès", media: mediaFile });

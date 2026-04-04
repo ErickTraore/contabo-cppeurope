@@ -48,9 +48,12 @@ const uploadVideo = async (req, res) => {
     console.log('📥 Vidéo reçue :', req.file);
     console.log('📦 req.body:', req.body);
 
+    const relDir = process.env.UPLOAD_VIDEOS_PATH || 'uploads/videos';
+    const dbPath = path.join(relDir, req.file.filename).replace(/\\/g, '/');
+
     const mediaFile = await Media.create({
       filename: req.file.filename,
-      path: req.file.path,
+      path: dbPath,
       type: 'video',
       messageId: req.body.messageId || null,
     });

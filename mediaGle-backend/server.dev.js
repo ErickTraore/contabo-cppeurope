@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 
 const app = require('./app');
-const sequelize = require('./database');
+const { sequelize } = require('./models');
 
 const port = process.env.PORT || 5002;
 

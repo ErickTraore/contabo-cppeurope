@@ -1,0 +1,39 @@
+services:
+  mediaLocale-backend:
+    image: node:18
+    working_dir: /app
+    command: sh -c "npm install && NODE_ENV=development node server.dev.js"
+    env_file:
+      - .env.development
+    environment:
+      NODE_ENV: development
+    volumes:
+      - ./:/app
+    ports:
+      - "127.0.0.1:7008:7008"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    restart: always
+    # Aligné sur .env.development (DB_USERNAME=c, DB_NAME=media_locale_dev_cppeurope_v1).
+    environment:
+      MARIADB_ROOT_PASSWORD: CppEurope@2025!
+      MARIADB_DATABASE: media_locale_dev_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 25s
+    ports:
+      - "127.0.0.1:3309:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:

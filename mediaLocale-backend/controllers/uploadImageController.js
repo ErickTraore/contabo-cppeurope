@@ -47,9 +47,12 @@ const uploadImage = async (req, res) => {
   }
 
   try {
+    const relDir = process.env.UPLOAD_IMAGES_PATH || 'uploads/images';
+    const dbPath = path.join(relDir, req.file.filename).replace(/\\/g, '/');
+
     const mediaFile = await Media.create({
       filename: req.file.filename,
-      path: req.file.path,
+      path: dbPath,
       type: 'image',
       messageId: req.body.messageId || null,
     });

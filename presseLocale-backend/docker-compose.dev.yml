@@ -1,0 +1,45 @@
+services:
+  presseLocale-backend:
+    image: node:18
+    working_dir: /app
+    command: sh -c "npm install && NODE_ENV=development node server.dev.js"
+    env_file:
+      - .env.development
+    environment:
+      NODE_ENV: development
+      # .env.development a DB_HOST=presselocale-db ; en stack dev le service s'appelle mariadb.
+      DB_HOST: mariadb
+      # mediaLocale-backend (7008) : obligatoire — sans cela listMessages appelait mediaGle (7004) et mélangeait les médias par id.
+      MEDIA_LOCALE_BACKEND_URL: http://host.docker.internal:7008/api/media-locale/getMedia
+      # JWT : lire JWT_SIGN_SECRET / JWT_REFRESH_SECRET depuis .env.development (même secret que user-backend/.env.development).
+      # Ne pas les surcharger ici : les défauts précédents ne correspondaient pas à dev_sign_secret → 403 sur /api/messages*.
+    volumes:
+      - ./:/app
+    ports:
+      - "127.0.0.1:7005:7005"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    restart: always
+    # Aligné sur .env.development (DB_USERNAME=c, DB_NAME=presse_locale_prod_cppeurope_v1).
+    environment:
+      MARIADB_ROOT_PASSWORD: CppEurope@2025!
+      MARIADB_DATABASE: presse_locale_prod_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 25s
+    ports:
+      - "127.0.0.1:3310:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:

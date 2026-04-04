@@ -1,0 +1,42 @@
+services:
+  userMediaProfile-backend:
+    image: node:18
+    working_dir: /app
+    command: sh -c "npm install && NODE_ENV=development node server.dev.js"
+    env_file:
+      - .env.development
+    environment:
+      NODE_ENV: development
+      # .env.development a DB_HOST=userprofile-db (prod) ; en stack dev le service s'appelle mariadb.
+      DB_HOST: mariadb
+    volumes:
+      - ./:/app
+    ports:
+      # Process écoute sur PORT=7007 (.env.development) ; 7017 est le port hôte (aligné avec .env.local du frontend).
+      - "127.0.0.1:7017:7007"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:10.11
+    restart: always
+    # Aligné sur .env.development (DB_USERNAME=c, DB_NAME=user_profile_prod_cppeurope_v1).
+    environment:
+      MARIADB_ROOT_PASSWORD: CppEurope@2025!
+      MARIADB_DATABASE: user_profile_prod_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 25s
+    ports:
+      - "127.0.0.1:3312:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:

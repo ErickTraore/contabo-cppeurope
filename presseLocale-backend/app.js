@@ -6,6 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const { getSignature } = require('./routes/zoomCtrl');
 const apiRouter = require('./apiRouter').router;
+const { sequelize } = require('./models');
 
 const app = express();
 
@@ -66,6 +67,14 @@ app.use(express.urlencoded({ extended: true }));
 // 🔁 Routes
 app.get('/', (req, res) => res.status(200).send('PRESSE-LOCALE-BACKEND (prod) actif'));
 app.get('/api/zoom/signature', getSignature);
+app.get('/api/ping', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.status(200).json({ ok: true, db: 'ok' });
+  } catch (e) {
+    res.status(500).json({ ok: false, db: 'error', error: e.message });
+  }
+});
 app.use('/api', apiRouter);
 
 module.exports = app;

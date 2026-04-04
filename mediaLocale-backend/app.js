@@ -6,13 +6,20 @@ const dotenv = require('dotenv');
 
 const app = express();
 
-// 🔐 Charger .env.production
-dotenv.config({ path: path.join(__dirname, '.env.production') });
+// Charger dynamiquement le bon fichier .env selon NODE_ENV
+const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
+dotenv.config({ path: path.join(__dirname, envFile) });
 
-// 🌍 Origines autorisées à partir de REACT_APP_URL
+// 🌍 Origines autorisées : REACT_APP_URL + ALLOWED_ORIGINS (ex. localhost E2E)
 const BASE_ORIGIN = process.env.REACT_APP_URL;
+const fromEnvList = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter((o) => o.length > 0);
 const allowedOrigins = [
-  BASE_ORIGIN && BASE_ORIGIN.replace('://', '://www.') 
+  BASE_ORIGIN,
+  BASE_ORIGIN && BASE_ORIGIN.replace('://', '://www.'),
+  ...fromEnvList,
 ].filter(Boolean);
 
 // CORS global
@@ -43,12 +50,6 @@ app.use(express.json({ limit: MAX_UPLOAD }));
 app.use(express.urlencoded({ extended: true, limit: MAX_UPLOAD }));
 
 
-// (Optionnel) autres origines supplémentaires via ALLOWED_ORIGINS
-const extraAllowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(o => o.trim())
-  .filter(o => o.length > 0);
-
 // 🔓 Fichiers statiques uploadés
 app.use('/api/uploads-locale/images', express.static(path.join(__dirname, 'uploads/images')));
 app.use('/api/uploads-locale/videos', express.static(path.join(__dirname, 'uploads/videos')));
@@ -58,5 +59,24 @@ app.use('/api/uploads-locale/videos', express.static(path.join(__dirname, 'uploa
 // Routes API media (préfixe /api/media/)
 const apiRouter = require('./apiRouter').router;
 app.use('/api/media-locale', apiRouter);
+
+
+// Importer sequelize pour la supervision BDD
+const { sequelize } = require('./models');
+
+// Route GET / pour la supervision
+app.get('/', (req, res) => {
+  res.send('OK');
+});
+
+// Route GET /api/ping pour supervision BDD
+app.get('/api/ping', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    res.status(200).json({ ok: true, db: 'ok' });
+  } catch (e) {
+    res.status(500).json({ ok: false, db: 'error', error: e.message });
+  }
+});
 
 module.exports = app;
