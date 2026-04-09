@@ -1,6 +1,6 @@
 # Interpolation : docker compose --env-file docker-compose.production.env -f docker-compose.yml
 services:
-  presseLocale-backend:
+  home-config-backend:
     image: ${COMPOSE_NODE_IMAGE}
     working_dir: /usr/src/app
     command: ["sh", "-c", "${COMPOSE_APP_SHELL_COMMAND}"]
@@ -15,7 +15,7 @@ services:
     depends_on:
       - mariadb
     networks:
-      - db-admin-net
+      - home-config-net
 
   mariadb:
     image: ${COMPOSE_MARIADB_IMAGE}
@@ -26,20 +26,15 @@ services:
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
       MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
     volumes:
-      - presseLocale-db-data:/var/lib/mysql
-    ports:
-      - "${MARIADB_HOST_PORT}:3306"
+      - home-config-prod-db:/var/lib/mysql
     networks:
-      db-admin-net:
+      home-config-net:
         aliases:
-          - presselocale-db
+          - mariadb
 
 volumes:
-  presseLocale-db-data:
-    external: true
-    name: ${COMPOSE_VOLUME_PRESSE_LOCALE_DB}
+  home-config-prod-db:
 
 networks:
-  db-admin-net:
-    external: true
-    name: ${COMPOSE_DB_ADMIN_NET_NAME}
+  home-config-net:
+    name: ${COMPOSE_HOME_CONFIG_NET_NAME}

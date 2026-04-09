@@ -1,14 +1,14 @@
-version: "3.9"
+# Interpolation : docker compose --env-file docker-compose.production.env -f docker-compose.yml
 services:
   mediaLocale-backend:
-    image: node:18-alpine
+    image: ${COMPOSE_NODE_IMAGE}
     working_dir: /usr/src/app
-    command: sh -c "npm install --only=production && node server.prod.js"
+    command: ["sh", "-c", "${COMPOSE_APP_SHELL_COMMAND}"]
     ports:
-      - "127.0.0.1:7008:7008"
+      - "${PROD_BIND_HOST}:${PROD_HOST_PORT}:${CONTAINER_APP_PORT}"
     env_file: .env.production
     environment:
-      NODE_ENV: production
+      NODE_ENV: ${NODE_ENV}
     volumes:
       - ./:/usr/src/app
       - ./uploads:/usr/src/app/uploads
@@ -19,17 +19,17 @@ services:
       - db-admin-net
 
   mariadb:
-    image: mariadb:11
+    image: ${COMPOSE_MARIADB_IMAGE}
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: media_locale_prod_cppeurope_v1
-      MARIADB_USER: c
-      MARIADB_PASSWORD: CppEurope@2025!
-      MARIADB_ROOT_PASSWORD: RootPass@2025!
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
     volumes:
       - media-locale-db-data:/var/lib/mysql
     ports:
-      - "3309:3306"
+      - "${MARIADB_HOST_PORT}:3306"
     networks:
       db-admin-net:
         aliases:
@@ -38,8 +38,10 @@ services:
 
 volumes:
   media-locale-db-data:
-    name: media-locale-backend_media-db-data
+    external: true
+    name: ${COMPOSE_VOLUME_MEDIA_LOCALE_DB}
 
 networks:
   db-admin-net:
-    name: db-admin-net
+    external: true
+    name: ${COMPOSE_DB_ADMIN_NET_NAME}

@@ -1,0 +1,39 @@
+services:
+  home-config-backend:
+    image: node:20
+    working_dir: /app
+    command: sh -c "npm install && node server.dev.js"
+    env_file:
+      - .env.development
+    environment:
+      NODE_ENV: development
+      DB_HOST: mariadb
+    ports:
+      - "127.0.0.1:7020:7020"
+    volumes:
+      - ./:/app
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: RootPass@2025!
+      MARIADB_DATABASE: home_config_dev_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 25s
+    ports:
+      - "127.0.0.1:3321:3306"
+    volumes:
+      - home-config-db-data:/var/lib/mysql
+
+volumes:
+  home-config-db-data:
