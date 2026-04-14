@@ -73,3 +73,11 @@ exports.putHomeConfig = async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 };
+
+exports.uploadHomeImage = (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'Fichier image requis (champ « image »).' });
+  }
+  const url = `/api/home-config/media/${req.file.filename}`;
+  res.status(201).json({ url });
+};

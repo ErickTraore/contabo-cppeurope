@@ -12,6 +12,7 @@ services:
       - "127.0.0.1:7020:7020"
     volumes:
       - ./:/app
+      - home-config-dev-uploads:/app/uploads/home
     depends_on:
       mariadb:
         condition: service_healthy
@@ -37,3 +38,4 @@ services:
 
 volumes:
   home-config-db-data:
+  home-config-dev-uploads:

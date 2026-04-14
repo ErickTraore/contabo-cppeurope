@@ -32,6 +32,17 @@ app.options("*", cors());
 app.use(express.json({ limit: "25mb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// Front + Cypress utilisent REACT_APP_PRESSE_GENERALE_API=…/api puis /messages/* ; routes réelles sous /api/presse-generale/messages/*.
+app.use((req, res, next) => {
+  const u = req.url.split("?")[0];
+  if (u === "/api/messages" || u.startsWith("/api/messages/")) {
+    req.url = req.url.replace(/^\/api\/messages/, "/api/presse-generale/messages");
+  } else if (u.startsWith("/api/message/")) {
+    req.url = req.url.replace(/^\/api\/message\//, "/api/presse-generale/messages/");
+  }
+  next();
+});
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 let nextId = 1;
@@ -129,6 +140,11 @@ app.delete("/api/presse-generale/messages/:id", requireBearer, (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "not found" });
   messages.splice(idx, 1);
   res.status(204).send();
+});
+
+/** Supervision / E2E (002_servicesStatusExtended) : statuts attendus 200 | 401 | 400. */
+app.get("/api/ping", (req, res) => {
+  res.status(200).json({ ok: true, store: "memory" });
 });
 
 const port = Number(process.env.PORT || 7006);

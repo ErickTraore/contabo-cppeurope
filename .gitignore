@@ -2,11 +2,7 @@
 **/node_modules/
 node_modules/
 
-# Environment files
-.env
-.env.*
-!.env.example
-!.env.production.example
+# Fichiers .env : non exclus — versionnés pour staging / clone aligné.
 
 # Logs
 logs/

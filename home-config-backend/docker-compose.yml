@@ -1,16 +1,17 @@
-# Interpolation : docker compose --env-file docker-compose.production.env -f docker-compose.yml
 services:
   home-config-backend:
-    image: ${COMPOSE_NODE_IMAGE}
+    image: node:20-alpine
     working_dir: /usr/src/app
-    command: ["sh", "-c", "${COMPOSE_APP_SHELL_COMMAND}"]
+    command: sh -c "npm install --omit=dev && node server.prod.js"
     ports:
-      - "${PROD_BIND_HOST}:${PROD_HOST_PORT}:${CONTAINER_APP_PORT}"
+      # Hostinger nginx → http://62.171.186.233:7020 (pas 127.0.0.1 seul)
+      - "0.0.0.0:7020:7020"
     env_file: .env.production
     environment:
-      NODE_ENV: ${NODE_ENV}
+      NODE_ENV: production
     volumes:
       - ./:/usr/src/app
+      - home-config-uploads:/usr/src/app/uploads/home
     restart: unless-stopped
     depends_on:
       - mariadb
@@ -18,13 +19,13 @@ services:
       - home-config-net
 
   mariadb:
-    image: ${COMPOSE_MARIADB_IMAGE}
+    image: mariadb:11
     restart: unless-stopped
     environment:
-      MARIADB_DATABASE: ${MARIADB_DATABASE}
-      MARIADB_USER: ${MARIADB_USER}
-      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: home_config_prod_cppeurope_v1
+      MARIADB_USER: c
+      MARIADB_PASSWORD: CppEurope@2025!
+      MARIADB_ROOT_PASSWORD: RootPass@2025!
     volumes:
       - home-config-prod-db:/var/lib/mysql
     networks:
@@ -34,7 +35,8 @@ services:
 
 volumes:
   home-config-prod-db:
+  home-config-uploads:
 
 networks:
   home-config-net:
-    name: ${COMPOSE_HOME_CONFIG_NET_NAME}
+    name: home-config-net

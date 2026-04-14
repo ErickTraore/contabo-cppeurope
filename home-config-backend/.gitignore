@@ -1,0 +1,3 @@
+uploads/home/*
+!uploads/home/.gitkeep
+node_modules/

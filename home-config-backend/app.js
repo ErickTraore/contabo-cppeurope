@@ -6,12 +6,17 @@ require('dotenv').config({
       : path.join(__dirname, '.env.development'),
 });
 
+const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models');
+const { getUploadDir } = require('./middleware/multerHomeImage');
 const apiRouter = require('./apiRouter').router;
 
 const app = express();
+
+const homeUploadDir = getUploadDir();
+fs.mkdirSync(homeUploadDir, { recursive: true });
 
 const isDev = process.env.NODE_ENV !== 'production';
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
@@ -27,12 +32,20 @@ app.use(
       return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
-    methods: ['GET', 'PUT', 'OPTIONS'],
+    methods: ['GET', 'PUT', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
 app.use(express.json({ limit: '1mb' }));
+
+app.use(
+  '/api/home-config/media',
+  express.static(homeUploadDir, {
+    maxAge: '7d',
+    index: false,
+  })
+);
 
 app.get('/', (req, res) => res.status(200).send('HOME-CONFIG-BACKEND actif'));
 app.get('/api/ping', async (req, res) => {

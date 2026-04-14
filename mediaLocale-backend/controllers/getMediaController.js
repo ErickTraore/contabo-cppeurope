@@ -7,7 +7,11 @@ const { Media } = require('../models');
 const getMedia = async (req, res) => {
     try {
         const { messageId } = req.params;
-        const mediaFiles = await Media.findAll({ where: { messageId } });
+        const mid = parseInt(String(messageId), 10);
+        if (!Number.isFinite(mid) || mid <= 0) {
+            return res.status(400).json({ error: 'messageId invalide.' });
+        }
+        const mediaFiles = await Media.findAll({ where: { messageId: mid } });
         
         if (mediaFiles.length === 0) {
             return res.status(404).json({ error: "Aucun média trouvé pour ce message." });

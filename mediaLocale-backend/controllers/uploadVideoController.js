@@ -51,11 +51,20 @@ const uploadVideo = async (req, res) => {
     const relDir = process.env.UPLOAD_VIDEOS_PATH || 'uploads/videos';
     const dbPath = path.join(relDir, req.file.filename).replace(/\\/g, '/');
 
+    const rawMid = req.body && req.body.messageId;
+    const messageId = parseInt(String(rawMid), 10);
+    if (!Number.isFinite(messageId) || messageId <= 0) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(400).json({ error: 'messageId invalide ou manquant.' });
+    }
+
     const mediaFile = await Media.create({
       filename: req.file.filename,
       path: dbPath,
       type: 'video',
-      messageId: req.body.messageId || null,
+      messageId,
     });
 
     res.status(201).json({

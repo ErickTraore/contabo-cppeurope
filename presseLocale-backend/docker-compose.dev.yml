@@ -11,8 +11,10 @@ services:
       DB_HOST: mariadb
       # mediaLocale-backend (7008) : obligatoire — sans cela listMessages appelait mediaGle (7004) et mélangeait les médias par id.
       MEDIA_LOCALE_BACKEND_URL: http://host.docker.internal:7008/api/media-locale/getMedia
-      # JWT : lire JWT_SIGN_SECRET / JWT_REFRESH_SECRET depuis .env.development (même secret que user-backend/.env.development).
-      # Ne pas les surcharger ici : les défauts précédents ne correspondaient pas à dev_sign_secret → 403 sur /api/messages*.
+      # JWT : doivent matcher user-backend qui signe le login (E2E = souvent Hostinger prod sur :7001 + .env.production).
+      # Sans ça, .env.development (dev_sign_secret) → 403 « sign-1 » sur POST/GET /api/messages*.
+      JWT_SIGN_SECRET: "0f9f8e9d8c7b6a5z4e3r2t1y0u"
+      JWT_REFRESH_SECRET: "0f9f8e9d8c7b6a5z4e3r2t1y0u0f9f8e9d8c7b6a5z4e3r2t1y0u"
     volumes:
       - ./:/app
     ports:
