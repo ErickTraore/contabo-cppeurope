@@ -6,7 +6,7 @@ const express = require('express');
 const cors = require('cors');
 const { getSignature } = require('./routes/zoomCtrl');
 const apiRouter = require('./apiRouter').router;
-const { sequelize } = require('./models');
+const { sequelize, Message } = require('./models');
 
 const app = express();
 
@@ -76,6 +76,29 @@ app.use(express.urlencoded({ extended: true }));
 // 🔁 Routes
 app.get('/', (req, res) => res.status(200).send('PRESSE-GENERALE-BACKEND (prod) actif'));
 app.get('/api/zoom/signature', getSignature);
+
+// Point de vérité public utilisé par media-backend pour autoriser/refuser les uploads.
+app.get('/api/presse-generale/messages/:id/format', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: 'invalid id' });
+  }
+
+  try {
+    const hasFormatColumn = !!(Message.rawAttributes && Message.rawAttributes.format);
+    const attrs = hasFormatColumn ? ['id', 'format'] : ['id'];
+    const msg = await Message.findByPk(id, { attributes: attrs });
+    if (!msg) {
+      return res.status(404).json({ error: 'not found' });
+    }
+
+    const fmt = hasFormatColumn && msg.format != null && msg.format !== '' ? String(msg.format) : null;
+    return res.status(200).json({ id: msg.id, format: fmt });
+  } catch (e) {
+    return res.status(500).json({ error: 'db error', details: e.message });
+  }
+});
+
 app.use('/api', apiRouter);
 
 // Route GET /api/ping pour supervision BDD

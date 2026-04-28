@@ -5,6 +5,26 @@ const JWT_SIGN_SECRET = process.env.JWT_SIGN_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 const EXPIRE_SESSION = process.env.EXPIRE_SESSION;
 const EXPIRE_EXTEND_SESSION = process.env.EXPIRE_EXTEND_SESSION;
+const JWT_SIGN_SECRET_COMPAT = process.env.JWT_SIGN_SECRET_COMPAT;
+
+function resolveSignSecrets() {
+  const secrets = [JWT_SIGN_SECRET, JWT_SIGN_SECRET_COMPAT]
+    .filter((v) => typeof v === 'string' && v.trim().length > 0)
+    .map((v) => v.trim());
+  return [...new Set(secrets)];
+}
+
+function verifyWithAnySignSecret(token) {
+  const secrets = resolveSignSecrets();
+  for (const secret of secrets) {
+    try {
+      return jwt.verify(token, secret);
+    } catch (err) {
+      // Try next configured secret.
+    }
+  }
+  return null;
+}
 
 module.exports = {
   generateTokenForUser: function (userData) {
@@ -34,11 +54,9 @@ module.exports = {
     let userId = -1;
     const token = module.exports.parseAuthorization(authorization);
     if (token != null) {
-      try {
-        const jwtToken = jwt.verify(token, JWT_SIGN_SECRET);
-        if (jwtToken != null)
-          userId = jwtToken.userId;
-      } catch (err) {}
+      const jwtToken = verifyWithAnySignSecret(token);
+      if (jwtToken != null)
+        userId = jwtToken.userId;
     }
     return userId;
   },
@@ -58,20 +76,12 @@ module.exports = {
     }
   },
   verifyAccessToken: function (token) {
-    try {
-      return jwt.verify(token, JWT_SIGN_SECRET);
-    } catch (err) {
-      return null;
-    }
+    return verifyWithAnySignSecret(token);
   },
   decodeToken: function (token) {
     // const token = module.exports.parseAuthorization(authorization);
     if (token != null) {
-      try {
-        return jwt.verify(token, JWT_SIGN_SECRET); // renvoie { userId, isAdmin }
-      } catch (err) {
-        return null;
-      }
+      return verifyWithAnySignSecret(token); // renvoie { userId, isAdmin }
     }
     return null;
   }

@@ -1,28 +1,28 @@
 services:
   presseGenerale-backend:
+    image: node:20
+    working_dir: /app
     command: sh -c "npm install && NODE_ENV=development node server.dev.js"
     env_file:
       - .env.development
     environment:
       NODE_ENV: development
+      DB_HOST: mariadb
     depends_on:
       mariadb:
         condition: service_healthy
-
-  presseLocale-backend:
-    command: sh -c "npm install && NODE_ENV=development node server.dev.js"
-    env_file:
-      - .env.development
-    environment:
-      NODE_ENV: development
-    depends_on:
-      mariadb:
-        condition: service_healthy
+    volumes:
+      - ./:/app
+    ports:
+      - "127.0.0.1:17012:7006"
 
   mariadb:
+    image: mariadb:10.11
+    restart: always
     environment:
       # Aligné sur .env.development (DB_NAME=presse_generale_dev_cppeurope_v1).
       MARIADB_DATABASE: presse_generale_dev_cppeurope_v1
+      MARIADB_ROOT_PASSWORD: CppEurope@2025!
       MARIADB_USER: c
       MARIADB_PASSWORD: CppEurope@2025!
     healthcheck:
@@ -32,4 +32,9 @@ services:
       retries: 15
       start_period: 25s
     ports:
-      - "3311:3306"
+      - "127.0.0.1:3311:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:
