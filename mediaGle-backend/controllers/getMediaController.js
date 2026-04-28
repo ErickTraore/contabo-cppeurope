@@ -14,31 +14,31 @@ const getMedia = async (req, res) => {
   try {
     const { messageId } = req.params;
     const fmt = await fetchPresseFormat(messageId);
-    if (isTextOnlyFormat(fmt)) {
-      return res.status(200).json([]);
-    }
-    // Ne pas exposer de lignes orphelines si le format n'a pas pu être vérifié.
-    if (isUnknownFormat(fmt)) {
-      return res.status(200).json([]);
-    }
 
     const mid = parseInt(messageId, 10);
     const mediaFiles = await Media.findAll({ where: { messageId: mid } });
 
-    if (mediaFiles.length === 0) {
-      return res.status(404).json({ error: "Aucun média trouvé pour ce message." });
+    if (isTextOnlyFormat(fmt)) {
+      return res.status(200).json([]);
     }
 
-    const filtered = [];
-    for (const media of mediaFiles) {
-      const t = (media.type || "").toLowerCase();
-      if (t.includes("image") && !allowsImageForFormat(fmt)) continue;
-      if (t.includes("video") && !allowsVideoForFormat(fmt)) continue;
-      filtered.push(media);
+    // Compat legacy : si le format est introuvable (schéma presse sans colonne format),
+    // on renvoie les médias réellement liés au message au lieu de les masquer.
+    if (mediaFiles.length === 0) {
+      return res.status(200).json([]);
     }
+
+    const filtered = isUnknownFormat(fmt)
+      ? mediaFiles
+      : mediaFiles.filter((media) => {
+          const t = (media.type || "").toLowerCase();
+          if (t.includes("image") && !allowsImageForFormat(fmt)) return false;
+          if (t.includes("video") && !allowsVideoForFormat(fmt)) return false;
+          return true;
+        });
 
     if (filtered.length === 0) {
-      return res.status(404).json({ error: "Aucun média trouvé pour ce message." });
+      return res.status(200).json([]);
     }
 
     const mediaWithUrls = filtered.map((media) => {

@@ -11,6 +11,13 @@ function parseMessageId(body) {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+function parseFormatHint(body) {
+  const raw = body && (body.format || body.articleFormat || body.presseFormat);
+  if (!raw) return null;
+  const fmt = String(raw).trim().toLowerCase();
+  return fmt || null;
+}
+
 const MAX_BYTES = process.env.UPLOAD_LIMIT_BYTES
   ? parseInt(process.env.UPLOAD_LIMIT_BYTES, 10)
   : 600 * 1024 * 1024;
@@ -60,7 +67,8 @@ const uploadImage = async (req, res) => {
       });
     }
 
-    const fmt = await fetchPresseFormat(messageId);
+    const fmtFromPresse = await fetchPresseFormat(messageId);
+    const fmt = fmtFromPresse || parseFormatHint(req.body);
     if (isUnknownFormat(fmt)) {
       try {
         if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);

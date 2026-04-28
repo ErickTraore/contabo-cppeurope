@@ -13,7 +13,7 @@ services:
       - ./:/app
     ports:
       # Process écoute sur PORT=7007 (.env.development) ; 7017 est le port hôte (aligné avec .env.local du frontend).
-      - "127.0.0.1:7017:7007"
+      - "0.0.0.0:7017:7007"
     depends_on:
       mariadb:
         condition: service_healthy
