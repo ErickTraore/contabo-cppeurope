@@ -15,6 +15,10 @@ function uniqueNonEmpty(values) {
 function resolveProbeUrls(req) {
   const envMeUrl = String(process.env.USER_BACKEND_ME_URL || '').trim();
   const envAdminUrl = String(process.env.USER_BACKEND_ADMIN_CHECK_URL || '').trim();
+  const allowedOrigins = String(process.env.ALLOWED_ORIGINS || '').trim();
+  const looksStagingEnv = /:9085\b|staging\.cppeurope\.net/i.test(allowedOrigins);
+  const stagingMeUrl = looksStagingEnv ? envMeUrl.replace(':17001/', ':9085/') : '';
+  const stagingAdminUrl = looksStagingEnv ? envAdminUrl.replace(':17001/', ':9085/') : '';
 
   const host = firstHeaderValue(req.headers['x-forwarded-host'] || req.headers.host);
   const proto = firstHeaderValue(req.headers['x-forwarded-proto']) || 'http';
@@ -22,8 +26,8 @@ function resolveProbeUrls(req) {
   const requestMeUrl = originFromRequest ? `${originFromRequest}/api/users/me` : '';
   const requestAdminUrl = originFromRequest ? `${originFromRequest}/api/users/all/` : '';
   return {
-    meUrls: uniqueNonEmpty([envMeUrl, requestMeUrl]),
-    adminUrls: uniqueNonEmpty([envAdminUrl, requestAdminUrl]),
+    meUrls: uniqueNonEmpty([stagingMeUrl, envMeUrl, requestMeUrl]),
+    adminUrls: uniqueNonEmpty([stagingAdminUrl, envAdminUrl, requestAdminUrl]),
   };
 }
 
