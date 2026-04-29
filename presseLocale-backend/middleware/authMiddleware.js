@@ -8,6 +8,10 @@ function firstHeaderValue(v) {
     .trim();
 }
 
+function uniqueNonEmpty(values) {
+  return [...new Set(values.map((v) => String(v || '').trim()).filter(Boolean))];
+}
+
 function resolveProbeUrls(req) {
   const envMeUrl = String(process.env.USER_BACKEND_ME_URL || '').trim();
   const envAdminUrl = String(process.env.USER_BACKEND_ADMIN_CHECK_URL || '').trim();
@@ -17,19 +21,9 @@ function resolveProbeUrls(req) {
   const originFromRequest = host ? `${proto}://${host}` : '';
   const requestMeUrl = originFromRequest ? `${originFromRequest}/api/users/me` : '';
   const requestAdminUrl = originFromRequest ? `${originFromRequest}/api/users/all/` : '';
-
-  const requestLooksStaging =
-    /(^|\.)staging\.cppeurope\.net$/i.test(host) || host === '93.127.167.134:9085';
-  const envLooksProdPort = /:17001\//.test(envMeUrl);
-
-  // Garde-fou: en staging, ne jamais introspecter vers le user-backend prod:17001.
-  if (requestLooksStaging && envLooksProdPort && requestMeUrl && requestAdminUrl) {
-    return { meUrl: requestMeUrl, adminUrl: requestAdminUrl };
-  }
-
   return {
-    meUrl: envMeUrl || requestMeUrl,
-    adminUrl: envAdminUrl || requestAdminUrl,
+    meUrls: uniqueNonEmpty([envMeUrl, requestMeUrl]),
+    adminUrls: uniqueNonEmpty([envAdminUrl, requestAdminUrl]),
   };
 }
 
@@ -80,14 +74,23 @@ module.exports = async (req, res, next) => {
   }
 
   // Fallback staging/proxy : valider le token auprès du user-backend public.
-  const { meUrl, adminUrl } = resolveProbeUrls(req);
-  const meProbe = await probeUserBackend(meUrl, token);
+  const { meUrls, adminUrls } = resolveProbeUrls(req);
+
+  let meProbe = { ok: false };
+  for (const candidate of meUrls) {
+    meProbe = await probeUserBackend(candidate, token);
+    if (meProbe.ok && meProbe.body && Number.isFinite(Number(meProbe.body.id))) break;
+  }
   if (!meProbe.ok || !meProbe.body || !Number.isFinite(Number(meProbe.body.id))) {
     console.warn(`[AUTH] Token rejeté (local + introspection) depuis ${req.ip}`);
     return res.status(403).json({ error: 'Accès refusé. Token invalide ou expiré.' });
   }
 
-  const adminProbe = await probeUserBackend(adminUrl, token);
+  let adminProbe = { ok: false };
+  for (const candidate of adminUrls) {
+    adminProbe = await probeUserBackend(candidate, token);
+    if (adminProbe.ok) break;
+  }
   req.userId = Number(meProbe.body.id);
   req.user = {
     userId: Number(meProbe.body.id),
