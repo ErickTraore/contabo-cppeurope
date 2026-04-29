@@ -39,5 +39,6 @@ build/
 # Sauvegardes compose locales
 **/*.bak.*
 
-# Staging uploads (même logique que uploads/)
-**/uploads-staging/
+# Staging uploads (même logique que uploads/) — on ignore le contenu mais on garde les .gitkeep
+**/uploads-staging/**
+!**/.gitkeep
