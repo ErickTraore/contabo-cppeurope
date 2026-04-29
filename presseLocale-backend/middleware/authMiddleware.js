@@ -2,6 +2,37 @@
 
 const jwtUtils = require('../utils/jwt.utils');
 
+function firstHeaderValue(v) {
+  return String(v || '')
+    .split(',')[0]
+    .trim();
+}
+
+function resolveProbeUrls(req) {
+  const envMeUrl = String(process.env.USER_BACKEND_ME_URL || '').trim();
+  const envAdminUrl = String(process.env.USER_BACKEND_ADMIN_CHECK_URL || '').trim();
+
+  const host = firstHeaderValue(req.headers['x-forwarded-host'] || req.headers.host);
+  const proto = firstHeaderValue(req.headers['x-forwarded-proto']) || 'http';
+  const originFromRequest = host ? `${proto}://${host}` : '';
+  const requestMeUrl = originFromRequest ? `${originFromRequest}/api/users/me` : '';
+  const requestAdminUrl = originFromRequest ? `${originFromRequest}/api/users/all/` : '';
+
+  const requestLooksStaging =
+    /(^|\.)staging\.cppeurope\.net$/i.test(host) || host === '93.127.167.134:9085';
+  const envLooksProdPort = /:17001\//.test(envMeUrl);
+
+  // Garde-fou: en staging, ne jamais introspecter vers le user-backend prod:17001.
+  if (requestLooksStaging && envLooksProdPort && requestMeUrl && requestAdminUrl) {
+    return { meUrl: requestMeUrl, adminUrl: requestAdminUrl };
+  }
+
+  return {
+    meUrl: envMeUrl || requestMeUrl,
+    adminUrl: envAdminUrl || requestAdminUrl,
+  };
+}
+
 async function probeUserBackend(url, token) {
   const target = String(url || '').trim();
   if (!target) return { ok: false };
@@ -49,15 +80,14 @@ module.exports = async (req, res, next) => {
   }
 
   // Fallback staging/proxy : valider le token auprès du user-backend public.
-  const meUrl = process.env.USER_BACKEND_ME_URL;
-  const adminCheckUrl = process.env.USER_BACKEND_ADMIN_CHECK_URL;
+  const { meUrl, adminUrl } = resolveProbeUrls(req);
   const meProbe = await probeUserBackend(meUrl, token);
   if (!meProbe.ok || !meProbe.body || !Number.isFinite(Number(meProbe.body.id))) {
     console.warn(`[AUTH] Token rejeté (local + introspection) depuis ${req.ip}`);
     return res.status(403).json({ error: 'Accès refusé. Token invalide ou expiré.' });
   }
 
-  const adminProbe = await probeUserBackend(adminCheckUrl, token);
+  const adminProbe = await probeUserBackend(adminUrl, token);
   req.userId = Number(meProbe.body.id);
   req.user = {
     userId: Number(meProbe.body.id),
