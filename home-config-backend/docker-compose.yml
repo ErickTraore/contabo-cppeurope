@@ -11,7 +11,7 @@ services:
       NODE_ENV: production
     volumes:
       - ./:/usr/src/app
-      - home-config-uploads:/usr/src/app/uploads/home
+      - ./uploads/home:/usr/src/app/uploads/home
     restart: unless-stopped
     depends_on:
       - mariadb
@@ -35,7 +35,6 @@ services:
 
 volumes:
   home-config-prod-db:
-  home-config-uploads:
 
 networks:
   home-config-net:

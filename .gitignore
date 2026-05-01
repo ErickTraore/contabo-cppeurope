@@ -17,9 +17,8 @@ temp/
 *.pid
 *.seed
 
-# Uploads and generated media
-**/uploads/
-uploads/
+# Uploads and generated media (contenu ignoré, .gitkeep versionnés pour créer les dossiers)
+# Chaque sous-projet gère son propre .gitignore pour uploads/
 public/uploads/
 
 # Build / coverage
