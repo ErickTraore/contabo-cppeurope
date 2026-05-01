@@ -9,6 +9,8 @@ services:
     env_file: .env.production
     environment:
       NODE_ENV: ${NODE_ENV}
+      # Force le port ecoute Node sur le meme port que celui mappe par Docker.
+      PORT: ${CONTAINER_APP_PORT}
     volumes:
       - ./:/usr/src/app
       - ./uploads:/usr/src/app/uploads

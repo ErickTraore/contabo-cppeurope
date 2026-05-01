@@ -11,7 +11,8 @@ dotenv.config({ path: path.join(__dirname, '.env.production') });
 sequelize.sync({ alter: true })   // ou .sync() si tu préfères
   .then(() => {
     console.log('✅ DB synchronisée (media-backend)');
-    const port = process.env.PORT || 7004;    app.listen(port, () => {
+    const port = process.env.PORT || 7008;
+    app.listen(port, () => {
       console.log(`🚀 media-backend en écoute sur le port ${port}`);
     });
   })
