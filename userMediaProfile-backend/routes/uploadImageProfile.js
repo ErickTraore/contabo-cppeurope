@@ -3,6 +3,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 const router = express.Router();
 
@@ -12,9 +13,13 @@ const MAX_BYTES = process.env.UPLOAD_LIMIT_BYTES
   : 600 * 1024 * 1024; // fallback sécurisé
 
 // 📁 Définir le stockage des fichiers avec chemin ABSOLU
+const UPLOAD_DIR = path.join(__dirname, '..', process.env.UPLOAD_PROFILE_PATH || 'uploads/imagesprofile');
+// Créer le répertoire s'il n'existe pas (évite ENOENT au premier upload)
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '..', process.env.UPLOAD_PROFILE_PATH || 'uploads/imagesprofile'));
+    cb(null, UPLOAD_DIR);
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + '-' + file.originalname);
