@@ -3,7 +3,9 @@
   "version": "0.6.1",
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test jest --detectOpenHandles"
+    "test": "NODE_ENV=test jest --detectOpenHandles",
+    "dedupe:dry": "node scripts/dedupe-media-by-message.js",
+    "dedupe:apply": "node scripts/dedupe-media-by-message.js --apply"
   },
   "keywords": [],
   "author": "",
