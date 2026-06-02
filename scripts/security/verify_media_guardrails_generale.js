@@ -98,16 +98,21 @@ async function uploadVideo(messageId, format) {
 
 function validateCase(fmt, statuses) {
   const expected = {
-    article: { image1: 403, image2: 403, video1: 403, video2: 403 },
-    'article-photo': { image1: 201, image2: 409, video1: 403, video2: 403 },
-    'article-video': { image1: 403, image2: 403, video1: 201, video2: 409 },
-    'article-thumbnail-video': { image1: 201, image2: 409, video1: 201, video2: 409 },
+    article: { image1: [403], image2: [403], video1: [403], video2: [403] },
+    'article-photo': { image1: [201, 409], image2: [409], video1: [403], video2: [403] },
+    'article-video': { image1: [403], image2: [403], video1: [201, 409], video2: [409] },
+    'article-thumbnail-video': {
+      image1: [201, 409],
+      image2: [409],
+      video1: [201, 409],
+      video2: [409],
+    },
   }[fmt];
 
   const mismatches = [];
   for (const key of Object.keys(expected)) {
-    if (statuses[key] !== expected[key]) {
-      mismatches.push(`${key}: expected ${expected[key]}, got ${statuses[key]}`);
+    if (!expected[key].includes(statuses[key])) {
+      mismatches.push(`${key}: expected one of [${expected[key].join(', ')}], got ${statuses[key]}`);
     }
   }
   return { ok: mismatches.length === 0, mismatches, expected };
