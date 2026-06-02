@@ -26,10 +26,10 @@ services:
   mariadb:
     image: mariadb:10.11
     restart: always
-    # Aligné sur .env.development (DB_USERNAME=c, DB_NAME=presse_locale_prod_cppeurope_v1).
+    # Aligné sur .env.development (DB_USERNAME=c, DB_NAME=presse_locale_dev_cppeurope_v1).
     environment:
       MARIADB_ROOT_PASSWORD: CppEurope@2025!
-      MARIADB_DATABASE: presse_locale_prod_cppeurope_v1
+      MARIADB_DATABASE: presse_locale_dev_cppeurope_v1
       MARIADB_USER: c
       MARIADB_PASSWORD: CppEurope@2025!
     healthcheck:
