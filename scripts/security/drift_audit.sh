@@ -75,6 +75,8 @@ else
   fail "Local path is not a git repository"
 fi
 
+EXPECTED_SHA="${ORIGIN_MAIN:-$HEAD}"
+
 if [[ "$SKIP_REMOTE" == "false" ]]; then
   REMOTE_OUT="$(ssh "$HOST" 'set -e
 # 1) Check git drift in /var/www/cppeurope if present
@@ -92,11 +94,16 @@ else
 fi
 
 # 2) Stacks without git are deployment-risk indicators
-for d in /opt/contabo-cppeurope/presseLocale-backend /opt/contabo-cppeurope/staging-presse-locale /opt/contabo-cppeurope/presseGenerale-backend /opt/contabo-cppeurope/staging-presse-generale; do
+for d in /opt/contabo-cppeurope/presseLocale-backend /opt/contabo-cppeurope/presseGenerale-backend /opt/contabo-cppeurope/mediaLocale-backend /opt/contabo-cppeurope/mediaGle-backend /opt/contabo-cppeurope/staging-compose-media-locale-ump; do
   if [ -d "$d/.git" ]; then
-    echo "STACK_GIT:$d:yes"
+    echo "STACK_STATUS:$d:git"
   else
-    echo "STACK_GIT:$d:no"
+    if [ -f "$d/.release-sha" ]; then
+      lock_sha="$(tr -d " \n\r\t" < "$d/.release-sha" 2>/dev/null || true)"
+      echo "STACK_STATUS:$d:locked:$lock_sha"
+    else
+      echo "STACK_STATUS:$d:unmanaged"
+    fi
   fi
 done
 
@@ -122,12 +129,27 @@ echo "STG_RT_ORIGINS=$STG_RT_ORIGINS"
     warn "Remote git workspace not found or not readable"
   fi
 
-  NO_GIT_STACKS="$(echo "$REMOTE_OUT" | grep '^STACK_GIT:.*:no' || true)"
-  if [[ -n "$NO_GIT_STACKS" ]]; then
-    warn "Some deployed stacks are not git-backed"
-    echo "$NO_GIT_STACKS"
+  STACK_LINES="$(echo "$REMOTE_OUT" | grep '^STACK_STATUS:' || true)"
+  if [[ -z "$STACK_LINES" ]]; then
+    fail "No stack status returned by remote check"
   else
-    pass "All checked stacks are git-backed"
+    while IFS= read -r line; do
+      [[ -n "$line" ]] || continue
+      dir="$(echo "$line" | cut -d: -f2)"
+      mode="$(echo "$line" | cut -d: -f3)"
+      if [[ "$mode" == "git" ]]; then
+        pass "Stack is git-backed: $dir"
+      elif [[ "$mode" == "locked" ]]; then
+        lock_sha="$(echo "$line" | cut -d: -f4)"
+        if [[ -n "$lock_sha" && "$lock_sha" == "$EXPECTED_SHA" ]]; then
+          pass "Gitless stack locked to expected SHA ($EXPECTED_SHA): $dir"
+        else
+          fail "Gitless stack lock mismatch at $dir (expected $EXPECTED_SHA, got ${lock_sha:-empty})"
+        fi
+      else
+        fail "Unmanaged gitless stack (missing .release-sha): $dir"
+      fi
+    done <<< "$STACK_LINES"
   fi
 
   PROD_FILE_ORIGINS="$(echo "$REMOTE_OUT" | grep '^PROD_FILE_ORIGINS=' | sed 's/^PROD_FILE_ORIGINS=//')"
