@@ -2,7 +2,12 @@ const fs = require("fs");
 const multer = require("multer");
 const path = require("path");
 const { Media } = require("../models");
-const { fetchPresseFormat, allowsImageForFormat, isUnknownFormat } = require("../utils/presseFormatGate");
+const {
+  fetchPresseFormat,
+  allowsImageForFormat,
+  maxImagesForFormat,
+  isUnknownFormat,
+} = require("../utils/presseFormatGate");
 
 function parseMessageId(body) {
   const raw = body && body.messageId;
@@ -83,6 +88,17 @@ const uploadImage = async (req, res) => {
         if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       } catch (e) {}
       return res.status(403).json({ error: "Ce type d'article n'accepte pas d'image." });
+    }
+
+    const existingImages = await Media.count({ where: { messageId, type: "image" } });
+    const maxImages = maxImagesForFormat(fmt);
+    if (existingImages >= maxImages) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(409).json({
+        error: `Quota image atteint pour ce format (${existingImages}/${maxImages}).`,
+      });
     }
 
     const mediaFile = await Media.create({

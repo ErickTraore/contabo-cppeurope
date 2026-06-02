@@ -4,6 +4,24 @@ const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const { Media } = require('../models');
+const {
+  normalizeFormat,
+  isUnknownFormat,
+  allowsImageForFormat,
+  maxImagesForFormat,
+} = require('../utils/presseFormatGate');
+
+function parseMessageId(body) {
+  const raw = body && body.messageId;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = parseInt(String(raw), 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function parseFormatHint(body) {
+  const raw = body && (body.format || body.articleFormat || body.presseFormat);
+  return normalizeFormat(raw);
+}
 
 // 📦 Charger la limite depuis .env
 const MAX_BYTES = process.env.UPLOAD_LIMIT_BYTES
@@ -47,6 +65,38 @@ const uploadImage = async (req, res) => {
   }
 
   try {
+    const messageId = parseMessageId(req.body);
+    if (!messageId) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(400).json({ error: 'messageId invalide ou manquant.' });
+    }
+
+    const fmt = parseFormatHint(req.body);
+    if (isUnknownFormat(fmt)) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(400).json({ error: 'format manquant (article-photo, article-video, article-thumbnail-video, article).' });
+    }
+
+    if (!allowsImageForFormat(fmt)) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(403).json({ error: "Ce type d'article n'accepte pas d'image." });
+    }
+
+    const existingImages = await Media.count({ where: { messageId, type: 'image' } });
+    const maxImages = maxImagesForFormat(fmt);
+    if (existingImages >= maxImages) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(409).json({ error: `Quota image atteint pour ce format (${existingImages}/${maxImages}).` });
+    }
+
     const relDir = process.env.UPLOAD_IMAGES_PATH || 'uploads/images';
     const dbPath = path.join(relDir, req.file.filename).replace(/\\/g, '/');
 
@@ -54,7 +104,7 @@ const uploadImage = async (req, res) => {
       filename: req.file.filename,
       path: dbPath,
       type: 'image',
-      messageId: req.body.messageId || null,
+      messageId,
     });
 
     res.status(201).json({ message: 'Image uploadée avec succès', media: mediaFile });

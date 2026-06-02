@@ -2,7 +2,12 @@ const fs = require("fs");
 const multer = require("multer");
 const path = require("path");
 const { Media } = require("../models");
-const { fetchPresseFormat, allowsVideoForFormat, isUnknownFormat } = require("../utils/presseFormatGate");
+const {
+  fetchPresseFormat,
+  allowsVideoForFormat,
+  maxVideosForFormat,
+  isUnknownFormat,
+} = require("../utils/presseFormatGate");
 
 function parseMessageId(body) {
   const raw = body && body.messageId;
@@ -81,6 +86,17 @@ const uploadVideo = async (req, res) => {
         if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       } catch (e) {}
       return res.status(403).json({ error: "Ce type d'article n'accepte pas de vidéo." });
+    }
+
+    const existingVideos = await Media.count({ where: { messageId, type: "video" } });
+    const maxVideos = maxVideosForFormat(fmt);
+    if (existingVideos >= maxVideos) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(409).json({
+        error: `Quota vidéo atteint pour ce format (${existingVideos}/${maxVideos}).`,
+      });
     }
 
     const mediaFile = await Media.create({

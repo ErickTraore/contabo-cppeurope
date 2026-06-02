@@ -3,6 +3,8 @@ const {
   fetchPresseFormat,
   allowsImageForFormat,
   allowsVideoForFormat,
+  maxImagesForFormat,
+  maxVideosForFormat,
   isUnknownFormat,
 } = require("../utils/presseFormatGate");
 
@@ -41,7 +43,30 @@ const getMedia = async (req, res) => {
       return res.status(200).json([]);
     }
 
-    const mediaWithUrls = filtered.map((media) => {
+    const maxImages = maxImagesForFormat(fmt);
+    const maxVideos = maxVideosForFormat(fmt);
+    const sorted = filtered
+      .slice()
+      .sort((a, b) => (new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()) || (b.id - a.id));
+    const kept = [];
+    let images = 0;
+    let videos = 0;
+    for (const media of sorted) {
+      const t = (media.type || "").toLowerCase();
+      if (t.includes("image")) {
+        if (images >= maxImages) continue;
+        images += 1;
+      } else if (t.includes("video")) {
+        if (videos >= maxVideos) continue;
+        videos += 1;
+      }
+      kept.push(media);
+    }
+    const finalList = kept.sort(
+      (a, b) => (new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()) || (a.id - b.id)
+    );
+
+    const mediaWithUrls = finalList.map((media) => {
       let path = "";
       if (media.type === "image") {
         path = `/api/uploads/images/${media.filename}`;

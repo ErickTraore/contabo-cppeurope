@@ -69,6 +69,25 @@ function isUnknownFormat(fmt) {
   return fmt == null || fmt === "";
 }
 
+function normalizeFormat(fmt) {
+  if (!fmt) return "";
+  return String(fmt).trim().toLowerCase();
+}
+
+function maxImagesForFormat(fmt) {
+  const f = normalizeFormat(fmt);
+  if (f === "article" || f === "article-text" || f === "text" || f === "article-video") return 0;
+  if (f === "article-photo" || f === "article-thumbnail-video") return 1;
+  return 0;
+}
+
+function maxVideosForFormat(fmt) {
+  const f = normalizeFormat(fmt);
+  if (f === "article" || f === "article-text" || f === "text" || f === "article-photo") return 0;
+  if (f === "article-video" || f === "article-thumbnail-video") return 1;
+  return 0;
+}
+
 function allowsImageForFormat(fmt) {
   if (isUnknownFormat(fmt)) return false;
   if (fmt === "article" || fmt === "article-text" || fmt === "text") return false;
@@ -87,5 +106,8 @@ module.exports = {
   fetchPresseFormat,
   allowsImageForFormat,
   allowsVideoForFormat,
+  maxImagesForFormat,
+  maxVideosForFormat,
+  normalizeFormat,
   isUnknownFormat,
 };

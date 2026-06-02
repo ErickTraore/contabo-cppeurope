@@ -4,6 +4,24 @@ const fs = require('fs');
 const multer = require('multer');
 const path = require('path');
 const { Media } = require('../models');
+const {
+  normalizeFormat,
+  isUnknownFormat,
+  allowsVideoForFormat,
+  maxVideosForFormat,
+} = require('../utils/presseFormatGate');
+
+function parseMessageId(body) {
+  const raw = body && body.messageId;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const n = parseInt(String(raw), 10);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+function parseFormatHint(body) {
+  const raw = body && (body.format || body.articleFormat || body.presseFormat);
+  return normalizeFormat(raw);
+}
 
 // 📦 Charger la limite depuis .env
 const MAX_BYTES = process.env.UPLOAD_LIMIT_BYTES
@@ -51,13 +69,36 @@ const uploadVideo = async (req, res) => {
     const relDir = process.env.UPLOAD_VIDEOS_PATH || 'uploads/videos';
     const dbPath = path.join(relDir, req.file.filename).replace(/\\/g, '/');
 
-    const rawMid = req.body && req.body.messageId;
-    const messageId = parseInt(String(rawMid), 10);
-    if (!Number.isFinite(messageId) || messageId <= 0) {
+    const messageId = parseMessageId(req.body);
+    if (!messageId) {
       try {
         if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       } catch (e) {}
       return res.status(400).json({ error: 'messageId invalide ou manquant.' });
+    }
+
+    const fmt = parseFormatHint(req.body);
+    if (isUnknownFormat(fmt)) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(400).json({ error: 'format manquant (article-photo, article-video, article-thumbnail-video, article).' });
+    }
+
+    if (!allowsVideoForFormat(fmt)) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(403).json({ error: "Ce type d'article n'accepte pas de vidéo." });
+    }
+
+    const existingVideos = await Media.count({ where: { messageId, type: 'video' } });
+    const maxVideos = maxVideosForFormat(fmt);
+    if (existingVideos >= maxVideos) {
+      try {
+        if (req.file.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {}
+      return res.status(409).json({ error: `Quota vidéo atteint pour ce format (${existingVideos}/${maxVideos}).` });
     }
 
     const mediaFile = await Media.create({
